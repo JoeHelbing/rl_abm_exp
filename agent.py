@@ -13,7 +13,7 @@ class AgentNetwork(nn.Module):
         super().__init__()
         layers = []
         for input_size, output_size in config.NETWORK_LAYERS[:-1]:
-            layers.extend([nn.Linear(input_size, output_size), nn.ReLU()])
+            layers.extend([nn.Linear(input_size, output_size), nn.GELU()])
         # Add final layer without ReLU
         input_size, output_size = config.NETWORK_LAYERS[-1]
         layers.append(nn.Linear(input_size, output_size))
