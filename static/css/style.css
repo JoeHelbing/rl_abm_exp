@@ -1,0 +1,177 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.navigation {
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 20px;
+}
+
+.navigation a {
+    text-decoration: none;
+    color: #333;
+    padding: 5px 15px;
+    border-radius: 4px;
+}
+
+.navigation a.active {
+    background: #2196F3;
+    color: white;
+}
+
+.control-panel {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.controls label {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.controls input {
+    width: 60px;
+    padding: 5px;
+}
+
+.visualization {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.grid-container, .metrics-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.metrics-container h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.metrics-container h3:first-child {
+    margin-top: 0;
+}
+
+canvas {
+    border: 1px solid #ddd;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+}
+
+.legend {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.color-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.color-box.type1 {
+    background: #2196F3;  /* Blue for type 1 */
+}
+
+.color-box.type2 {
+    background: #F44336;  /* Red for type 2 */
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+#happinessPlot, #type1LossPlot, #type2LossPlot,
+#type1HappinessPlot, #type2HappinessPlot, #epsilonPlot {
+    width: 100%;
+    height: 400px;
+    margin-bottom: 20px;
+}
+
+.config-controls {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.config-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.config-actions input {
+    flex: 1;
+    max-width: 200px;
+}
+
+.config-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.config-section h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.config-input {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.config-input label {
+    min-width: 200px;
+    font-size: 0.9em;
+}
+
+.config-input input,
+.config-input textarea {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.config-input textarea {
+    min-height: 60px;
+    resize: vertical;
+}

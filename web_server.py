@@ -1,0 +1,135 @@
+from pathlib import Path
+
+from flask import Flask, jsonify, render_template, request, session
+from flask_socketio import SocketIO
+
+from config import config
+from simulation import Simulation
+
+app = Flask(__name__)
+app.secret_key = "schelling_rl_secret"
+socketio = SocketIO(app)
+
+# Global state
+simulation = None
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+@app.route("/agent-metrics")
+def agent_metrics():
+    return render_template("agent_metrics.html")
+
+
+@app.route("/config", methods=["GET"])
+def get_config():
+    """Get current configuration"""
+    config_dict = {
+        key: value
+        for key, value in vars(config).items()
+        if not key.startswith("_") and key.isupper()
+    }
+    return jsonify(config_dict)
+
+
+@app.route("/config", methods=["POST"])
+def update_config():
+    """Update configuration"""
+    try:
+        new_config = request.json
+        config._update_from_dict(new_config)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/config/save", methods=["POST"])
+def save_config():
+    """Save configuration to file"""
+    try:
+        filename = request.json.get("filename", "config.json")
+        if not filename.endswith(".json"):
+            filename += ".json"
+        path = Path("configs") / filename
+        path.parent.mkdir(exist_ok=True)
+        config.save_to_file(str(path))
+        return jsonify({"status": "success", "path": str(path)})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/config/load", methods=["POST"])
+def load_config():
+    """Load configuration from file"""
+    try:
+        filename = request.json.get("filename")
+        if not filename:
+            return jsonify({"status": "error", "message": "No filename provided"}), 400
+        if not filename.endswith(".json"):
+            filename += ".json"
+        path = Path("configs") / filename
+        config.load_from_file(str(path))
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+def send_state_update(state):
+    data = {
+        "episode": state["episode"],
+        "grid": state["grid"].tolist(),
+        "metrics": state["metrics"],
+    }
+    socketio.emit("state_update", data)
+
+
+def send_agent_metrics(episode, agent_metrics):
+    data = {"episode": episode, "agent_metrics": agent_metrics}
+    socketio.emit("agent_metrics_update", data)
+
+
+@socketio.on("connect")
+def handle_connect():
+    if simulation and "is_running" in session and session.get("is_running", False):
+        state = simulation.get_current_state()
+        send_state_update(state)
+        if state["metrics"]:
+            send_agent_metrics(state["episode"], state["metrics"]["agent_metrics"])
+
+
+@socketio.on("start_simulation")
+def handle_start_simulation(data):
+    global simulation
+
+    session["is_running"] = True
+
+    grid_size = data.get("grid_size", 10)
+    num_agents_per_type = data.get("num_agents", 10)
+    num_episodes = data.get("num_episodes", 100)
+
+    # Dynamically compute the input dimension: 3 + 2*(grid_size^2)
+    dynamic_input_dim = 3 + 2 * (grid_size * grid_size)
+    
+    # Update the first layer of NETWORK_LAYERS in the config
+    config.NETWORK_LAYERS[0] = (dynamic_input_dim, config.NETWORK_LAYERS[0][1])
+    
+    simulation = Simulation(grid_size, num_agents_per_type)
+    
+    for _ in range(num_episodes):
+        metrics = simulation.run_episode()
+        state = simulation.get_current_state()
+        send_state_update(state)
+        send_agent_metrics(state["episode"], metrics["agent_metrics"])
+        socketio.sleep(0.5)  # Small delay to control visualization speed
+
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    session["is_running"] = False
+
+
+if __name__ == "__main__":
+    socketio.run(app, debug=True)

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agent Metrics - Schelling Model</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav class="navigation">
+            <a href="/">Simulation</a>
+            <a href="/agent-metrics" class="active">Agent Metrics</a>
+        </nav>
+
+        <div class="metrics-grid">
+            <div class="type1-metrics">
+                <h3>Type 1 Agents</h3>
+                <div id="type1LossPlot"></div>
+                <div id="type1HappinessPlot"></div>
+            </div>
+            <div class="type2-metrics">
+                <h3>Type 2 Agents</h3>
+                <div id="type2LossPlot"></div>
+                <div id="type2HappinessPlot"></div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/agent_metrics.js') }}"></script>
+</body>
+</html>
