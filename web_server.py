@@ -107,7 +107,7 @@ def handle_start_simulation(data):
         metrics = simulation.run_episode()
         state = simulation.get_current_state()
         send_state_update(state)
-        socketio.sleep(0.5)  # Small delay to control visualization speed
+        socketio.sleep(0.1)  # Small delay to control visualization speed
 
     session["is_running"] = False
     socketio.emit("simulation_stopped")
