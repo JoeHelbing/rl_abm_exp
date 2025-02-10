@@ -17,20 +17,17 @@ class AgentNetwork(nn.Module):
         layers = []
         for input_size, output_size in config.NETWORK_LAYERS[:-1]:
             layers.extend([nn.Linear(input_size, output_size), nn.GELU()])
-        # Add final layer without ReLU
         input_size, output_size = config.NETWORK_LAYERS[-1]
         layers.append(nn.Linear(input_size, output_size))
-
-        self.network = nn.Sequential(*layers)
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
-        # Add dimension validation
-        expected_dim = config.NETWORK_LAYERS[0][0]  # First layer's input size
+        expected_dim = config.NETWORK_LAYERS[0][0]
         if x.shape[-1] != expected_dim:
             raise ValueError(
                 f"Expected input dimension {expected_dim}, got {x.shape[-1]}"
             )
-        return self.network(x)
+        return self.net(x)
 
 
 class Agent:
@@ -48,7 +45,7 @@ class Agent:
             else "cpu"
         )
         self.network.to(self.device)
-        self.network = torch.compile(self.network)
+        # self.network = torch.compile(self.network)
         self.epsilon = config.INITIAL_EPSILON
         self.memory = deque(maxlen=config.MEMORY_SIZE)
         self.steps = 0  # Track individual agent steps
