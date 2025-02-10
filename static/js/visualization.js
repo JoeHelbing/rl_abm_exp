@@ -2,6 +2,7 @@ let socket = io();
 let currentConfig = {};  // Will be populated when config loads
 let gridCanvas = document.getElementById('gridCanvas');
 let ctx = gridCanvas.getContext('2d');
+let isSimulationRunning = false;
 
 // Separate data structures for plots
 let happinessData = {
@@ -38,6 +39,8 @@ let epsilonPlot = document.getElementById('epsilonPlot');
 let learningRatePlot = document.getElementById('learningRatePlot');
 let type1LossFacets = document.getElementById('type1LossFacets');
 let type2LossFacets = document.getElementById('type2LossFacets');
+let startButton = document.getElementById('startButton');
+let stopButton = document.getElementById('stopButton');
 
 function initializePlots() {
     // Initialize happiness plot with threshold line
@@ -143,6 +146,8 @@ function initializePlots() {
 }
 
 function startSimulation() {
+    if (isSimulationRunning) return;
+    
     // Clear previous data
     happinessData.episodes = [];
     happinessData.type1 = [];
@@ -152,8 +157,6 @@ function startSimulation() {
     epsilonData.type2 = [];
     learningRateData.episodes = [];
     learningRateData.values = [];
-    
-    // Clear loss facet data
     type1LossData = {};
     type2LossData = {};
     
@@ -162,12 +165,26 @@ function startSimulation() {
     const numAgents = parseInt(document.getElementById('numAgents').value);
     const numEpisodes = parseInt(document.getElementById('numEpisodes').value);
     
+    // Update UI
+    startButton.disabled = true;
+    stopButton.disabled = false;
+    isSimulationRunning = true;
+    
     // Start simulation on server
     socket.emit('start_simulation', {
         grid_size: gridSize,
         num_agents: numAgents,
         num_episodes: numEpisodes
     });
+}
+
+function stopSimulation() {
+    if (!isSimulationRunning) return;
+    
+    socket.emit('stop_simulation');
+    isSimulationRunning = false;
+    startButton.disabled = false;
+    stopButton.disabled = true;
 }
 
 function drawGrid(grid) {
@@ -375,23 +392,16 @@ resizeCanvas();
 
 // Socket event handlers
 socket.on('state_update', function(data) {
-    console.log('Received state update:', data); // Debug log
-    console.log('Episode:', data.episode);
-    if (data.metrics && data.metrics.agent_metrics) {
-        console.log('Agent metrics received:', data.metrics.agent_metrics);
-        const type1Count = data.metrics.agent_metrics.filter(m => m.type === 1).length;
-        const type2Count = data.metrics.agent_metrics.filter(m => m.type === 2).length;
-        console.log(`Found ${type1Count} type 1 agents and ${type2Count} type 2 agents`);
-        
-        // Log individual loss values
-        data.metrics.agent_metrics.forEach(metric => {
-            console.log(`Agent ${metric.id} (Type ${metric.type}): Loss = ${metric.loss}`);
-        });
-    } else {
-        console.log('No metrics data in update');
-    }
+    if (!isSimulationRunning) return;
+    
     drawGrid(data.grid);
     if (data.metrics) {
         updatePlots(data.episode, data.metrics);
     }
+});
+
+socket.on('simulation_stopped', function() {
+    isSimulationRunning = false;
+    startButton.disabled = false;
+    stopButton.disabled = true;
 });

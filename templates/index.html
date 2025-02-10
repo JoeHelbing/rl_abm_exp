@@ -10,20 +10,7 @@
     <div class="container wide">
         <nav class="navigation">
             <a href="/" class="active">Simulation</a>
-            <a href="/agent-metrics">Agent Metrics</a>
         </nav>
-
-        <div class="control-panel">
-            <h2>Configuration</h2>
-            <div class="config-controls">
-                <div class="config-actions">
-                    <button onclick="loadConfig()">Load Config</button>
-                    <button onclick="saveConfig()">Save Config</button>
-                    <input type="text" id="configFilename" placeholder="config.json">
-                </div>
-                <div id="configEditor"></div>
-            </div>
-        </div>
 
         <div class="control-panel">
             <h2>Simulation Controls</h2>
@@ -31,7 +18,8 @@
                 <label>Grid Size: <input type="number" id="gridSize" value="10" min="5" max="50"></label>
                 <label>Agents per Type: <input type="number" id="numAgents" value="10" min="5" max="50"></label>
                 <label>Episodes: <input type="number" id="numEpisodes" value="200" min="10" max="1000"></label>
-                <button onclick="startSimulation()">Start Simulation</button>
+                <button onclick="startSimulation()" id="startButton">Start Simulation</button>
+                <button onclick="stopSimulation()" id="stopButton" disabled>Stop Simulation</button>
             </div>
         </div>
         
@@ -68,6 +56,5 @@
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/visualization.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
 </body>
 </html>

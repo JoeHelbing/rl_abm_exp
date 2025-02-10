@@ -19,11 +19,6 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/agent-metrics")
-def agent_metrics():
-    return render_template("agent_metrics.html")
-
-
 @app.route("/config", methods=["GET"])
 def get_config():
     """Get current configuration"""
@@ -86,22 +81,11 @@ def send_state_update(state):
     socketio.emit("state_update", data)
 
 
-def send_agent_metrics(episode, agent_metrics):
-    print("\nSending agent metrics:")  # Debug print
-    for metric in agent_metrics:
-        print(f"Agent {metric['id']} type {metric['type']}: Loss = {metric['loss']}")
-
-    data = {"episode": episode, "agent_metrics": agent_metrics}
-    socketio.emit("agent_metrics_update", data)
-
-
 @socketio.on("connect")
 def handle_connect():
     if simulation and "is_running" in session and session.get("is_running", False):
         state = simulation.get_current_state()
         send_state_update(state)
-        if state["metrics"]:
-            send_agent_metrics(state["episode"], state["metrics"]["agent_metrics"])
 
 
 @socketio.on("start_simulation")
@@ -117,11 +101,21 @@ def handle_start_simulation(data):
     simulation = Simulation(grid_size, num_agents_per_type)
 
     for _ in range(num_episodes):
+        if not session.get("is_running", False):
+            break
+
         metrics = simulation.run_episode()
         state = simulation.get_current_state()
         send_state_update(state)
-        send_agent_metrics(state["episode"], metrics["agent_metrics"])
         socketio.sleep(0.5)  # Small delay to control visualization speed
+
+    session["is_running"] = False
+    socketio.emit("simulation_stopped")
+
+
+@socketio.on("stop_simulation")
+def handle_stop_simulation():
+    session["is_running"] = False
 
 
 @socketio.on("disconnect")
