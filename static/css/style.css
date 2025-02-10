@@ -54,12 +54,6 @@
     padding: 5px;
 }
 
-.visualization {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
 .visualization-wide {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -139,83 +133,33 @@ canvas {
     background: #F44336;  /* Red for type 2 */
 }
 
-.metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-#happinessPlot, #epsilonPlot, #learningRatePlot {
-    width: 100%;
-    height: 300px;
-    margin-bottom: 20px;
-}
-
-#type1LossPlot, #type2LossPlot,
-#type1HappinessPlot, #type2HappinessPlot {
-    width: 100%;
-    height: 400px;
-    margin-bottom: 20px;
-}
-
 #type1LossFacets, #type2LossFacets {
     width: 100%;
     height: 400px;
 }
 
-.config-controls {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 10px;
-}
-
-.config-actions {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.config-actions input {
-    flex: 1;
-    max-width: 200px;
-}
-
-.config-section {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 6px;
-    margin-bottom: 15px;
-}
-
-.config-section h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: #333;
-    font-size: 1.1em;
-}
-
-.config-input {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.config-input label {
-    min-width: 200px;
-    font-size: 0.9em;
-}
-
-.config-input input,
-.config-input textarea {
-    flex: 1;
-    padding: 4px 8px;
-    border: 1px solid #ddd;
+button {
+    padding: 8px 16px;
+    border: none;
     border-radius: 4px;
-    font-family: monospace;
+    background: #2196F3;
+    color: white;
+    cursor: pointer;
 }
 
-.config-input textarea {
-    min-height: 60px;
-    resize: vertical;
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    background: #1976D2;
+}
+
+#stopButton {
+    background: #F44336;
+}
+
+#stopButton:hover:not(:disabled) {
+    background: #D32F2F;
 }
