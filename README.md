@@ -1,6 +1,6 @@
 # Reinforcement Learning Enhanced Schelling Segregation Model
 
-This project implements an enhanced version of Schelling's segregation model using reinforcement learning (RL) agents. The simulation combines classical agent-based modeling with modern deep learning techniques to study emergent social patterns.
+This project implements an enhanced version of Schelling's segregation model using reinforcement learning (RL) agents. The simulation combines classical agent-based modeling with modern deep learning techniques to study emergent social patterns. This implementation has each individual agent instatiate and learn on a separate nueral network.
 
 ## Background
 
