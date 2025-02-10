@@ -15,6 +15,34 @@ class Environment:
         empty_y, empty_x = np.where(self.grid == 0)
         return list(zip(empty_y, empty_x))
 
+    def get_visible_area(self, position):
+        """Get the 5x5 area centered on the agent's position with torus topology"""
+        x, y = position
+        visible_area = np.zeros((5, 5))
+        for i in range(-2, 3):
+            for j in range(-2, 3):
+                # Apply torus wrapping
+                wrapped_x = (x + i) % self.grid_size
+                wrapped_y = (y + j) % self.grid_size
+                visible_area[i + 2, j + 2] = self.grid[wrapped_x, wrapped_y]
+        return visible_area
+
+    def get_adjacent_positions(self, position):
+        """Get positions adjacent to the current position (including staying put)"""
+        x, y = position
+        adjacent = [(x, y)]  # Include current position (stay put)
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            # Apply torus wrapping
+            new_x = (x + dx) % self.grid_size
+            new_y = (y + dy) % self.grid_size
+            adjacent.append((new_x, new_y))
+        return adjacent
+
+    def get_empty_adjacent_positions(self, position):
+        """Get empty positions adjacent to the current position"""
+        adjacent = self.get_adjacent_positions(position)
+        return [pos for pos in adjacent if self.grid[pos] == 0 or pos == position]
+
     def _place_agent(self, agent_type):
         """Find empty position and place agent"""
         empty_positions = np.where(self.grid == 0)
@@ -43,6 +71,12 @@ class Environment:
         """Move agent to new position and update grid"""
         x, y = agent.position
         new_x, new_y = new_position
+
+        # Verify the move is valid (adjacent or same position)
+        valid_positions = self.get_adjacent_positions((x, y))
+        if (new_x, new_y) not in valid_positions:
+            return agent.position  # Return current position if move is invalid
+
         self.grid[x, y] = 0
         self.grid[new_x, new_y] = agent.agent_type
         agent.position = (new_x, new_y)

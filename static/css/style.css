@@ -4,6 +4,10 @@
     padding: 20px;
 }
 
+.container.wide {
+    max-width: 1800px;
+}
+
 .navigation {
     background: #f5f5f5;
     padding: 10px;
@@ -56,11 +60,40 @@
     gap: 20px;
 }
 
+.visualization-wide {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+}
+
 .grid-container, .metrics-container {
     background: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.loss-facets {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.facets-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.facets-type1, .facets-type2 {
+    flex: 1;
+}
+
+.facets-type1 h4, .facets-type2 h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1em;
 }
 
 .metrics-container h3 {
@@ -112,11 +145,22 @@ canvas {
     gap: 20px;
 }
 
-#happinessPlot, #type1LossPlot, #type2LossPlot,
-#type1HappinessPlot, #type2HappinessPlot, #epsilonPlot {
+#happinessPlot, #epsilonPlot, #learningRatePlot {
+    width: 100%;
+    height: 300px;
+    margin-bottom: 20px;
+}
+
+#type1LossPlot, #type2LossPlot,
+#type1HappinessPlot, #type2HappinessPlot {
     width: 100%;
     height: 400px;
     margin-bottom: 20px;
+}
+
+#type1LossFacets, #type2LossFacets {
+    width: 100%;
+    height: 400px;
 }
 
 .config-controls {

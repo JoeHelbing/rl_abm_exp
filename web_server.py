@@ -87,6 +87,10 @@ def send_state_update(state):
 
 
 def send_agent_metrics(episode, agent_metrics):
+    print("\nSending agent metrics:")  # Debug print
+    for metric in agent_metrics:
+        print(f"Agent {metric['id']} type {metric['type']}: Loss = {metric['loss']}")
+
     data = {"episode": episode, "agent_metrics": agent_metrics}
     socketio.emit("agent_metrics_update", data)
 
@@ -110,14 +114,8 @@ def handle_start_simulation(data):
     num_agents_per_type = data.get("num_agents", 10)
     num_episodes = data.get("num_episodes", 100)
 
-    # Dynamically compute the input dimension: 3 + 2*(grid_size^2)
-    dynamic_input_dim = 3 + 2 * (grid_size * grid_size)
-    
-    # Update the first layer of NETWORK_LAYERS in the config
-    config.NETWORK_LAYERS[0] = (dynamic_input_dim, config.NETWORK_LAYERS[0][1])
-    
     simulation = Simulation(grid_size, num_agents_per_type)
-    
+
     for _ in range(num_episodes):
         metrics = simulation.run_episode()
         state = simulation.get_current_state()

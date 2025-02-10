@@ -7,6 +7,9 @@ import torch.optim as optim
 
 from config import config
 
+# Set matmul precision to high for better performance
+torch.set_float32_matmul_precision("high")
+
 
 class AgentNetwork(nn.Module):
     def __init__(self):
@@ -21,6 +24,12 @@ class AgentNetwork(nn.Module):
         self.network = nn.Sequential(*layers)
 
     def forward(self, x):
+        # Add dimension validation
+        expected_dim = config.NETWORK_LAYERS[0][0]  # First layer's input size
+        if x.shape[-1] != expected_dim:
+            raise ValueError(
+                f"Expected input dimension {expected_dim}, got {x.shape[-1]}"
+            )
         return self.network(x)
 
 
@@ -39,11 +48,43 @@ class Agent:
             else "cpu"
         )
         self.network.to(self.device)
+        self.network = torch.compile(self.network)
         self.epsilon = config.INITIAL_EPSILON
         self.memory = deque(maxlen=config.MEMORY_SIZE)
-        self.optimizer = optim.Adam(self.network.parameters(), lr=config.LEARNING_RATE)
         self.steps = 0  # Track individual agent steps
-        self.previous_grid = None  # Store the previous grid state
+        self.optimizer = None  # Will be initialized with get_scheduled_lr
+        self.initialize_optimizer()
+        self.previous_grid = None  # Store the previous visible area state
+        self.current_lr = config.INITIAL_LEARNING_RATE
+        self.current_loss = 0.0  # Track current loss value
+
+    def initialize_optimizer(self):
+        """Initialize optimizer with initial learning rate"""
+        self.optimizer = optim.Adam(
+            self.network.parameters(), lr=config.INITIAL_LEARNING_RATE
+        )
+
+    def get_scheduled_lr(self):
+        """Calculate learning rate using linear decay after warmup"""
+        if self.steps < config.WARMUP_STEPS:
+            return config.INITIAL_LEARNING_RATE
+        elif self.steps >= config.TOTAL_STEPS:
+            return config.MIN_LEARNING_RATE
+        else:
+            # Linear decay from INITIAL_LR to MIN_LR
+            decay_steps = config.TOTAL_STEPS - config.WARMUP_STEPS
+            decay_progress = (self.steps - config.WARMUP_STEPS) / decay_steps
+            return (
+                config.INITIAL_LEARNING_RATE
+                - (config.INITIAL_LEARNING_RATE - config.MIN_LEARNING_RATE)
+                * decay_progress
+            )
+
+    def update_learning_rate(self):
+        """Update the learning rate according to the schedule"""
+        self.current_lr = self.get_scheduled_lr()
+        for param_group in self.optimizer.param_groups:
+            param_group["lr"] = self.current_lr
 
     def update_epsilon(self):
         """Update epsilon using linear decay"""
@@ -81,26 +122,40 @@ class Agent:
         return same_type / total_neighbors
 
     def store_experience(self, state, action, reward, next_state):
+        """Store experience in replay memory and return current metrics"""
         self.memory.append((state, action, reward, next_state))
+        return {
+            "loss": self.current_loss,
+            "lr": self.current_lr,
+            "epsilon": self.epsilon,
+        }
 
     def get_state_features(self, position):
         x, y = position
-        grid_flat = self.environment.grid.flatten()
-        previous_grid_flat = (
+        visible_area = self.environment.get_visible_area(position)
+        visible_area_flat = visible_area.flatten()
+        previous_visible_area_flat = (
             self.previous_grid.flatten()
             if self.previous_grid is not None
-            else grid_flat
+            else visible_area_flat
         )
 
         # Normalize coordinates to [0,1] range to make learning easier
         norm_x = x / (self.environment.grid_size - 1)
         norm_y = y / (self.environment.grid_size - 1)
 
-        return (
+        # Validate feature dimensions
+        features = (
             [norm_x, norm_y, self.agent_type]
-            + list(grid_flat)
-            + list(previous_grid_flat)
+            + list(visible_area_flat)
+            + list(previous_visible_area_flat)
         )
+        expected_dim = config.NETWORK_LAYERS[0][0]
+        if len(features) != expected_dim:
+            raise ValueError(
+                f"State features dimension mismatch. Expected {expected_dim}, got {len(features)}"
+            )
+        return features
 
     def choose_action(self, valid_positions):
         if random.random() < self.epsilon:
@@ -114,7 +169,7 @@ class Agent:
         states_tensor = torch.FloatTensor(states).to(self.device)
         with torch.no_grad():
             q_values = self.network(states_tensor)
-
+        print(q_values)
         return valid_positions[torch.argmax(q_values).item()]
 
     def predict_happiness_increase(self, position):

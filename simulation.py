@@ -19,8 +19,7 @@ class Simulation:
 
     def run_episode(self):
         self.current_episode += 1
-        self.previous_grid = self.environment.get_grid_state().copy()
-        
+
         # Create empty dictionaries to record initial states and chosen actions
         initial_states = {}
         actions = {}
@@ -32,15 +31,18 @@ class Simulation:
 
         # Each agent chooses an action in turn and updates the board immediately.
         for agent in agent_list:
-            # Update the agent's previous grid state
-            agent.previous_grid = self.previous_grid
+            # Initialize agent's previous visible area if it's None
+            if agent.previous_grid is None:
+                agent.previous_grid = self.environment.get_visible_area(agent.position)
 
             # Get current state features for the agent's current position
             current_state = agent.get_state_features(agent.position)
             initial_states[agent] = current_state
 
-            # Get the valid empty positions based on the current board state
-            valid_positions = self.environment.get_all_empty_positions()
+            # Get the valid empty positions based on adjacent positions
+            valid_positions = self.environment.get_empty_adjacent_positions(
+                agent.position
+            )
             if valid_positions:
                 chosen_position = agent.choose_action(valid_positions)
                 actions[agent] = chosen_position
@@ -50,43 +52,37 @@ class Simulation:
                 actions[agent] = agent.position
                 new_positions[agent] = agent.position
 
-        for agent in self.agents:
+            # Update agent's previous grid state with current visible area
+            agent.previous_grid = self.environment.get_visible_area(agent.position)
+
+            # Train the agent immediately after its move
             reward = agent.calculate_reward(new_positions[agent])
             next_state = agent.get_state_features(new_positions[agent])
-            self.rl_algorithm.train_agent(agent, initial_states[agent], new_positions[agent], reward, next_state)
+            self.rl_algorithm.train_agent(
+                agent, initial_states[agent], new_positions[agent], reward, next_state
+            )
 
         metrics = self.calculate_metrics()
         self.metrics_history.append(metrics)
         return metrics
 
     def calculate_metrics(self):
+        type1_agents = [a for a in self.agents if a.agent_type == 1]
+        type2_agents = [a for a in self.agents if a.agent_type == 2]
+
         metrics = {
             "average_happiness_type1": float(
-                np.mean(
-                    [
-                        a.calculate_happiness(a.position)
-                        for a in self.agents
-                        if a.agent_type == 1
-                    ]
-                )
+                np.mean([a.calculate_happiness(a.position) for a in type1_agents])
             ),
             "average_happiness_type2": float(
-                np.mean(
-                    [
-                        a.calculate_happiness(a.position)
-                        for a in self.agents
-                        if a.agent_type == 2
-                    ]
-                )
+                np.mean([a.calculate_happiness(a.position) for a in type2_agents])
             ),
-            "average_epsilon_type1": float(
-                np.mean([a.epsilon for a in self.agents if a.agent_type == 1])
-            ),
-            "average_epsilon_type2": float(
-                np.mean([a.epsilon for a in self.agents if a.agent_type == 2])
-            ),
+            "average_epsilon_type1": float(np.mean([a.epsilon for a in type1_agents])),
+            "average_epsilon_type2": float(np.mean([a.epsilon for a in type2_agents])),
+            "average_lr": float(np.mean([a.current_lr for a in self.agents])),
         }
 
+        # Calculate agent-specific metrics
         agent_metrics = []
         for idx, agent in enumerate(self.agents):
             agent_metrics.append(
@@ -94,9 +90,15 @@ class Simulation:
                     "id": idx,
                     "type": agent.agent_type,
                     "happiness": float(agent.calculate_happiness(agent.position)),
-                    "loss": agent.loss_history[-1] if agent.loss_history else 0,
+                    "loss": float(
+                        agent.current_loss
+                    ),  # Use current_loss instead of loss_history
+                    "learning_rate": float(agent.current_lr),
                 }
             )
+            print(
+                f"Agent {idx} metrics - Type: {agent.agent_type}, Loss: {agent.current_loss}"
+            )  # Debug print
 
         metrics["agent_metrics"] = agent_metrics
         return metrics

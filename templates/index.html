@@ -7,7 +7,7 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="container wide">
         <nav class="navigation">
             <a href="/" class="active">Simulation</a>
             <a href="/agent-metrics">Agent Metrics</a>
@@ -35,7 +35,7 @@
             </div>
         </div>
         
-        <div class="visualization">
+        <div class="visualization-wide">
             <div class="grid-container">
                 <h3>Schelling Grid</h3>
                 <canvas id="gridCanvas"></canvas>
@@ -49,6 +49,21 @@
                 <div id="happinessPlot"></div>
                 <h3>Exploration Rate (Epsilon) Decay</h3>
                 <div id="epsilonPlot"></div>
+                <h3>Learning Rate Schedule</h3>
+                <div id="learningRatePlot"></div>
+            </div>
+            <div class="loss-facets">
+                <h3>Agent Loss Facets</h3>
+                <div class="facets-container">
+                    <div class="facets-type1">
+                        <h4>Type 1 Agents</h4>
+                        <div id="type1LossFacets"></div>
+                    </div>
+                    <div class="facets-type2">
+                        <h4>Type 2 Agents</h4>
+                        <div id="type2LossFacets"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
