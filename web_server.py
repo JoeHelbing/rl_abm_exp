@@ -1,25 +1,42 @@
+import logging
+from asyncio import sleep
+from json import dumps as json_dumps
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request, session
-from flask_socketio import SocketIO
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fasthtml.common import Div, P, Titled, fast_app, serve
 
 from config import config
 from simulation import Simulation
 
-app = Flask(__name__)
-app.secret_key = "schelling_rl_secret"
-socketio = SocketIO(app)
+logging.basicConfig(level=logging.INFO)
+
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Create FastHTML app with websocket support
+app, rt = fast_app(exts="ws")
 
 # Global state
 simulation = None
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+@rt("/")
+def home():
+    return Titled(
+        "Schelling Model with RL Agents",
+        Div(
+            P("Welcome to the Schelling Model with RL Agents simulation."), id="content"
+        ),
+    )
 
 
-@app.route("/config", methods=["GET"])
+@rt("/config", "GET")
 def get_config():
     """Get current configuration"""
     config_dict = {
@@ -27,101 +44,104 @@ def get_config():
         for key, value in vars(config).items()
         if not key.startswith("_") and key.isupper()
     }
-    return jsonify(config_dict)
+    return json_dumps(config_dict)
 
 
-@app.route("/config", methods=["POST"])
-def update_config():
+@rt("/config", "POST")
+def update_config(data):
     """Update configuration"""
     try:
-        new_config = request.json
-        config._update_from_dict(new_config)
-        return jsonify({"status": "success"})
+        config._update_from_dict(data)
+        return json_dumps({"status": "success"})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        return json_dumps({"status": "error", "message": str(e)})
 
 
-@app.route("/config/save", methods=["POST"])
-def save_config():
+@rt("/config/save", "POST")
+def save_config(data):
     """Save configuration to file"""
     try:
-        filename = request.json.get("filename", "config.json")
+        filename = data.get("filename", "config.json")
         if not filename.endswith(".json"):
-            filename += ".json"
+            return json_dumps({"status": "error", "message": "File must be .json"})
+
         path = Path("configs") / filename
         path.parent.mkdir(exist_ok=True)
         config.save_to_file(str(path))
-        return jsonify({"status": "success", "path": str(path)})
+        return json_dumps({"status": "success", "path": str(path)})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        return json_dumps({"status": "error", "message": str(e)})
 
 
-@app.route("/config/load", methods=["POST"])
-def load_config():
+@rt("/config/load", "POST")
+def load_config(data):
     """Load configuration from file"""
     try:
-        filename = request.json.get("filename")
+        filename = data.get("filename")
         if not filename:
-            return jsonify({"status": "error", "message": "No filename provided"}), 400
+            return json_dumps({"status": "error", "message": "No filename provided"})
+
         if not filename.endswith(".json"):
-            filename += ".json"
+            return json_dumps({"status": "error", "message": "File must be .json"})
+
         path = Path("configs") / filename
         config.load_from_file(str(path))
-        return jsonify({"status": "success"})
+        return json_dumps({"status": "success"})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        return json_dumps({"status": "error", "message": str(e)})
 
 
-def send_state_update(state):
+async def send_state_update(state, send):
     data = {
         "episode": state["episode"],
         "grid": state["grid"].tolist(),
         "metrics": state["metrics"],
     }
-    socketio.emit("state_update", data)
+    await send("state_update", json_dumps(data))
 
 
-@socketio.on("connect")
-def handle_connect():
-    if simulation and "is_running" in session and session.get("is_running", False):
+async def on_connect(send):
+    logging.info("WebSocket connected")
+    if simulation and app.session.get("is_running", False):
         state = simulation.get_current_state()
-        send_state_update(state)
+        await send_state_update(state, send)
 
 
-@socketio.on("start_simulation")
-def handle_start_simulation(data):
+async def on_disconnect(ws):
+    logging.info("WebSocket disconnected")
+    app.session["is_running"] = False
+
+
+@app.ws("/ws", conn=on_connect, disconn=on_disconnect)
+async def ws_handler(msg: dict, send):
     global simulation
+    logging.info(f"Received message: {msg}")
 
-    session["is_running"] = True
+    if msg.get("type") == "start_simulation":
+        data = msg.get("data", {})
+        app.session["is_running"] = True
 
-    grid_size = data.get("grid_size", 10)
-    num_agents_per_type = data.get("num_agents", 10)
-    num_episodes = data.get("num_episodes", 100)
+        grid_size = data.get("grid_size", 10)
+        num_agents_per_type = data.get("num_agents", 10)
+        num_episodes = data.get("num_episodes", 100)
 
-    simulation = Simulation(grid_size, num_agents_per_type)
+        simulation = Simulation(grid_size, num_agents_per_type)
 
-    for _ in range(num_episodes):
-        if not session.get("is_running", False):
-            break
+        for episode in range(num_episodes):
+            if not app.session.get("is_running", False):
+                break
 
-        metrics = simulation.run_episode()
-        state = simulation.get_current_state()
-        send_state_update(state)
-        socketio.sleep(0.1)  # Small delay to control visualization speed
+            state = simulation.step()
+            state["episode"] = episode
+            await send_state_update(state, send)
+            await sleep(0.1)  # Small delay between steps
 
-    session["is_running"] = False
-    socketio.emit("simulation_stopped")
+        app.session["is_running"] = False
+        await send("simulation_stopped")
 
-
-@socketio.on("stop_simulation")
-def handle_stop_simulation():
-    session["is_running"] = False
-
-
-@socketio.on("disconnect")
-def handle_disconnect():
-    session["is_running"] = False
+    elif msg.get("type") == "stop_simulation":
+        app.session["is_running"] = False
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    serve()
