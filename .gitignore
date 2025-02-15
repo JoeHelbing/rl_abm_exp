@@ -1,3 +1,7 @@
+# Project specific
+llms-ctx.txt
+.sesskey
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
